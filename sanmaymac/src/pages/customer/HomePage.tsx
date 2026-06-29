@@ -15,11 +15,15 @@ const MOCK_PRODUCTS: Product[] = [
 
 const MOCK_CATEGORIES: Category[] = [
   { id: 1, name: 'Áo thun' },
-  { id: 2, name: 'Quần' },
-  { id: 3, name: 'Váy' },
-  { id: 4, name: 'Đồng phục' },
-  { id: 5, name: 'Áo khoác' },
-  { id: 6, name: 'Thể thao' },
+  { id: 2, name: 'Áo khoác' },
+  { id: 3, name: 'Quần jean' },
+  { id: 4, name: 'Sơ mi' },
+  { id: 5, name: 'Đồng phục' },
+  { id: 6, name: 'Váy' },
+  { id: 7, name: 'Thể thao' },
+  { id: 8, name: 'Polo' },
+  { id: 9, name: 'Hoodie' },
+  { id: 10, name: 'Phụ kiện' },
 ];
 
 const MOCK_WORKSHOPS = [
@@ -31,19 +35,24 @@ const MOCK_WORKSHOPS = [
 // ── Icon map cho category ───────────────────────────────────────────────────
 const CATEGORY_ICONS: Record<string, { icon: string; color: string }> = {
   'Áo thun':    { icon: 'checkroom',    color: 'bg-blue-50 text-blue-600' },
-  'Quần':       { icon: 'dry_cleaning', color: 'bg-purple-50 text-purple-600' },
-  'Váy':        { icon: 'styler',       color: 'bg-pink-50 text-pink-600' },
-  'Đồng phục':  { icon: 'badge',        color: 'bg-amber-50 text-amber-600' },
   'Áo khoác':   { icon: 'layers',       color: 'bg-green-50 text-green-600' },
+  'Quần jean':  { icon: 'dry_cleaning', color: 'bg-purple-50 text-purple-600' },
+  'Quần':       { icon: 'dry_cleaning', color: 'bg-purple-50 text-purple-600' },
+  'Sơ mi':      { icon: 'iron',         color: 'bg-sky-50 text-sky-600' },
+  'Đồng phục':  { icon: 'badge',        color: 'bg-amber-50 text-amber-600' },
+  'Váy':        { icon: 'styler',       color: 'bg-pink-50 text-pink-600' },
   'Thể thao':   { icon: 'sports',       color: 'bg-red-50 text-red-600' },
+  'Polo':       { icon: 'apparel',      color: 'bg-teal-50 text-teal-600' },
+  'Hoodie':     { icon: 'cloud',        color: 'bg-indigo-50 text-indigo-600' },
+  'Phụ kiện':   { icon: 'shopping_bag', color: 'bg-orange-50 text-orange-600' },
 };
 const DEFAULT_ICON = { icon: 'category', color: 'bg-gray-50 text-gray-600' };
 
-/** Ảnh hero — may mặc, đồng phục, xưởng gia công (Unsplash) */
+/** Ảnh hero — may mặc, đồng phục (public/assets) */
 const HERO_IMAGES = {
-  main: 'https://images.unsplash.com/photo-1558178048-4ed784c13c60?w=900&h=700&fit=crop&q=80',
-  uniform: 'https://images.unsplash.com/photo-1523381219134-561b8a2a8b1a?w=500&h=400&fit=crop&q=80',
-  sewing: 'https://images.unsplash.com/photo-1584975019783-993861650fbf?w=500&h=400&fit=crop&q=80',
+  main: '/assets/Xuong-may-dong-phuc.jpg',
+  uniform: '/assets/thun-dong-phuc.jpg',
+  sewing: '/assets/may-may.jpg',
 };
 
 const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫';
@@ -122,42 +131,121 @@ export const HomePage = () => {
   return (
     <CustomerLayout>
       {/* ── HERO ── */}
-      <section className="relative bg-primary overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtmv82IrPxVAAX5KcBAbIMuBWZkrRFmiIGGXd-Dn3FFK-jrO8MY3ReyUX_Gim8MqvVjccJeGCMQ1qsbFcdSojZk3FSMYoM4VQUW8BtlA4Pyy2Exg8139tG8qlaOdL40UV4Lh2DICCZncTpMLCx_7wuNJhwCUSKRxB5jRMTc5HJ6URik2St9Jwj3EeDC7Ucx_hsOlfQcVL0x_QKFACosQm-m5aggOiA-FLg_yq0c2cMvJ-fmtZSXocP-iBWl3PhijbP7EKoTEQ8ha8"
-            alt=""
-            className="w-full h-full object-cover"
-          />
-        </div>
-        <div className="relative z-10 max-w-[1400px] mx-auto px-4 md:px-8 py-20 md:py-28">
-          <div className="max-w-2xl">
-            <span className="inline-block px-3 py-1 bg-secondary text-white text-xs font-bold rounded-full mb-4 uppercase tracking-widest">
-              Nền tảng may mặc #1 Việt Nam
-            </span>
-            <h1 className="text-white font-display text-4xl md:text-5xl lg:text-6xl leading-tight mb-6">
-              Kết nối xưởng may —<br />
-              <span className="text-secondary-fixed">Tối ưu sản xuất</span>
-            </h1>
-            <p className="text-white/80 font-body-lg mb-10 max-w-lg">
-              Tìm xưởng gia công uy tín, đặt hàng nhanh chóng và theo dõi tiến độ sản xuất theo thời gian thực.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Link to="/workshop-directory" className="btn-user-primary-md px-8 py-4 text-lg shadow-lg shadow-orange-500/30">
-                Tìm xưởng gia công
-              </Link>
-              <Link to="/create-tender" className="px-8 py-4 bg-white/10 border border-white/30 text-white font-bold rounded-xl hover:bg-white/20 transition-all backdrop-blur-sm">
-                Đăng yêu cầu gia công
-              </Link>
+      <section className="relative overflow-hidden bg-gradient-to-br from-orange-50 via-white to-amber-50">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-orange-200/40 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-72 w-72 rounded-full bg-amber-200/30 blur-3xl" />
+
+        <div className="relative z-10 max-w-[1400px] mx-auto px-4 md:px-8 py-14 md:py-20">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-700 text-xs font-bold rounded-full mb-5 uppercase tracking-widest">
+                <span className="material-symbols-outlined text-sm">apparel</span>
+                Gia công may mặc &amp; đồng phục
+              </span>
+              <h1 className="font-display text-4xl md:text-5xl lg:text-[3.25rem] leading-tight text-slate-900 mb-6">
+                Kết nối xưởng may —{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-500">
+                  Đồng phục chuẩn chất
+                </span>
+              </h1>
+              <p className="text-slate-600 text-lg leading-relaxed mb-8 max-w-xl">
+                Tìm xưởng chuyên may áo thun, đồng phục công ty, trường học — đặt hàng số lượng lớn, báo giá nhanh và theo dõi sản xuất trực tuyến.
+              </p>
+              <div className="flex flex-wrap gap-4 mb-10">
+                <Link to="/workshop-directory" className="btn-user-primary-md px-8 py-4 text-lg shadow-lg shadow-orange-500/25">
+                  Tìm xưởng gia công
+                </Link>
+                <Link to="/create-tender" className="btn-user-outline-md px-8 py-4 text-lg border-slate-300 text-slate-700 hover:border-orange-500">
+                  Đăng yêu cầu gia công
+                </Link>
+              </div>
+              <div className="flex flex-wrap gap-6 text-sm text-slate-600">
+                {[
+                  { icon: 'factory', label: '5.000+ xưởng may' },
+                  { icon: 'styler', label: '100k+ mẫu thiết kế' },
+                  { icon: 'support_agent', label: 'Hỗ trợ 24/7' },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-orange-600 text-xl">{item.icon}</span>
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="sm:hidden rounded-2xl overflow-hidden shadow-lg ring-1 ring-orange-100">
+              <img
+                src={HERO_IMAGES.main}
+                alt="Xưởng may gia công đồng phục"
+                className="w-full h-52 object-cover"
+              />
+            </div>
+
+            <div className="relative hidden sm:block">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-orange-900/10 ring-1 ring-orange-100">
+                <img
+                  src={HERO_IMAGES.main}
+                  alt="Xưởng may gia công đồng phục"
+                  className="w-full h-[320px] md:h-[400px] object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-transparent" />
+                <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
+                  <div className="text-white">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-200">Xưởng gia công</p>
+                    <p className="font-bold text-lg">May đồng phục số lượng lớn</p>
+                  </div>
+                  <span className="flex items-center gap-1 bg-white/90 text-orange-700 text-xs font-bold px-3 py-1.5 rounded-full">
+                    <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                    Uy tín
+                  </span>
+                </div>
+              </div>
+
+              <div className="absolute -bottom-6 -left-4 w-40 md:w-48 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white">
+                <img
+                  src={HERO_IMAGES.sewing}
+                  alt="Máy may công nghiệp"
+                  className="w-full h-28 md:h-32 object-cover"
+                />
+              </div>
+              <div className="absolute -top-4 -right-4 w-36 md:w-44 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white">
+                <img
+                  src={HERO_IMAGES.uniform}
+                  alt="Áo thun đồng phục"
+                  className="w-full h-24 md:h-28 object-cover"
+                />
+              </div>
+
+              <div className="absolute top-1/2 -translate-y-1/2 -left-8 hidden lg:flex flex-col gap-3">
+                {[
+                  { icon: 'checkroom', text: 'Áo thun & polo' },
+                  { icon: 'badge', text: 'Đồng phục công ty' },
+                  { icon: 'school', text: 'Đồng phục trường học' },
+                ].map((tag) => (
+                  <span
+                    key={tag.text}
+                    className="inline-flex items-center gap-2 bg-white/95 backdrop-blur-sm text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl shadow-md border border-orange-100"
+                  >
+                    <span className="material-symbols-outlined text-orange-600 text-base">{tag.icon}</span>
+                    {tag.text}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-        <div className="relative z-10 border-t border-white/10 bg-black/20 backdrop-blur-sm">
+
+        <div className="relative z-10 border-t border-orange-100 bg-white/60 backdrop-blur-sm">
           <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-5 grid grid-cols-3 gap-4 text-center">
-            {[{ value: '5,000+', label: 'Xưởng may' }, { value: '100k+', label: 'Mẫu thiết kế' }, { value: '24/7', label: 'Hỗ trợ AI' }].map((s) => (
-              <div key={s.label}>
-                <p className="text-white font-bold text-xl md:text-2xl">{s.value}</p>
-                <p className="text-white/60 text-xs uppercase tracking-widest mt-1">{s.label}</p>
+            {[
+              { value: '5,000+', label: 'Xưởng may', icon: 'factory' },
+              { value: '100k+', label: 'Mẫu thiết kế', icon: 'palette' },
+              { value: '24/7', label: 'Hỗ trợ AI', icon: 'smart_toy' },
+            ].map((s) => (
+              <div key={s.label} className="flex flex-col items-center gap-1">
+                <span className="material-symbols-outlined text-orange-500 text-xl hidden sm:block">{s.icon}</span>
+                <p className="text-slate-900 font-bold text-xl md:text-2xl">{s.value}</p>
+                <p className="text-slate-500 text-xs uppercase tracking-widest">{s.label}</p>
               </div>
             ))}
           </div>
@@ -174,14 +262,14 @@ export const HomePage = () => {
         </div>
 
         {loadingCategories ? (
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-24 bg-surface-container rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
-            {categories.slice(0, 6).map((cat) => {
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {categories.slice(0, 8).map((cat) => {
               const { icon, color } = CATEGORY_ICONS[cat.name] ?? DEFAULT_ICON;
               return (
                 <Link
