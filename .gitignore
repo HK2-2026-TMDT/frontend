@@ -1,0 +1,27 @@
+# ========================
+# Secrets — never commit
+# ========================
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+**/.env
+**/.env.local
+**/.env.production
+**/.env.*.local
+
+# Node / build
+**/node_modules/
+**/dist/
+**/.vite/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
