@@ -1,5 +1,6 @@
 import api from '../api';
 import { ApiResponse } from '../../types';
+import { PageResponse } from './catalogService';
 
 export interface UploadDesignResponse {
   frontDesignUrl: string;
@@ -32,6 +33,47 @@ export interface CreateBiddingPostResponse {
   description?: string;
   frontDesignUrl?: string;
   backDesignUrl?: string;
+}
+
+export interface BiddingPostSummary {
+  id: number;
+  title: string;
+  status?: string;
+  quoteCount?: number;
+  createdAt?: string;
+}
+
+export interface BiddingPostDetail {
+  id: number;
+  title: string;
+  description?: string;
+  aiImageUrl?: string;
+  frontDesignUrl?: string;
+  backDesignUrl?: string;
+  status?: string;
+  customerId?: number;
+  customerName?: string;
+  quoteCount?: number;
+  createdAt?: string;
+}
+
+export interface BiddingQuote {
+  id: number;
+  postId?: number;
+  workshopId?: number;
+  workshopName?: string;
+  workshopAvatar?: string;
+  offeredPrice: number;
+  estimateDays: number;
+  status?: string;
+  createdAt?: string;
+}
+
+export interface AcceptQuoteResponse {
+  id: number;
+  orderCode?: string;
+  status?: string;
+  totalAmount?: number;
 }
 
 const toFormData = (frontDesign: File, backDesign: File) => {
@@ -73,4 +115,18 @@ export const biddingService = {
 
   createPost: (payload: CreateBiddingPostPayload) =>
     api.post<ApiResponse<CreateBiddingPostResponse>>('/bidding/posts', payload),
+
+  listMyPosts: (params?: { page?: number; size?: number; sort?: string }) =>
+    api.get<ApiResponse<PageResponse<BiddingPostSummary>>>('/bidding/posts/me', { params }),
+
+  getPostById: (postId: number) =>
+    api.get<ApiResponse<BiddingPostDetail>>(`/bidding/posts/${postId}`),
+
+  listPostQuotes: (postId: number, params?: { page?: number; size?: number; sort?: string }) =>
+    api.get<ApiResponse<PageResponse<BiddingQuote>>>(`/bidding/posts/${postId}/quotes`, { params }),
+
+  acceptQuote: (postId: number, quoteId: number, addressId: number) =>
+    api.post<ApiResponse<AcceptQuoteResponse>>(`/bidding/posts/${postId}/quotes/${quoteId}/accept`, {
+      addressId,
+    }),
 };

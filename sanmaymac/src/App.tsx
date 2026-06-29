@@ -27,6 +27,8 @@ import { PaymentPage } from './pages/customer/PaymentPage';
 import { BatchPaymentPage } from './pages/customer/BatchPaymentPage';
 import { MomoReturnPage } from './pages/customer/MomoReturnPage';
 import { PostTenderPage } from './pages/customer/PostTenderPage';
+import { MyTendersPage } from './pages/customer/MyTendersPage';
+import { TenderQuotesPage } from './pages/customer/TenderQuotesPage';
 import { WishlistPage } from './pages/customer/WishlistPage';
 import { AddressManagementPage } from './pages/customer/AddressManagementPage';
 
@@ -54,7 +56,7 @@ import { AdminCouponManagementPage } from './pages/admin/CouponManagementPage';
 import { AdminProductAuditPage } from './pages/admin/ProductAuditPage';
 
 export function App() {
-  const { login, logout, isAuthenticated } = useAuthStore();
+  const { login, logout, isAuthenticated, user } = useAuthStore();
   const { fetchCart, reset: resetCart } = useCartStore();
   const [authReady, setAuthReady] = useState(false);
 
@@ -111,12 +113,12 @@ export function App() {
       .finally(() => setAuthReady(true));
   }, []);
 
-  // Fetch cart sau khi auth ready và đã đăng nhập
+  // Fetch cart sau khi auth ready — chỉ customer mới có giỏ hàng
   useEffect(() => {
-    if (authReady && isAuthenticated) {
+    if (authReady && isAuthenticated && user?.role === 'customer') {
       fetchCart();
     }
-  }, [authReady, isAuthenticated]);
+  }, [authReady, isAuthenticated, user?.role]);
 
   // Chờ auth khởi tạo xong mới render app để tránh flash "chưa đăng nhập"
   if (!authReady) return null;
@@ -138,7 +140,21 @@ export function App() {
           <Route path="orders/:id/payment" element={<PaymentPage />} />
           <Route path="payment/batch/:batchId" element={<BatchPaymentPage />} />
           <Route path="payment/momo-return" element={<MomoReturnPage />} />
-          <Route path="create-tender" element={<PostTenderPage />} />
+          <Route path="create-tender" element={
+            <ProtectedRoute requiredRoles={['customer']}>
+              <PostTenderPage />
+            </ProtectedRoute>
+          } />
+          <Route path="my-tenders" element={
+            <ProtectedRoute requiredRoles={['customer']}>
+              <MyTendersPage />
+            </ProtectedRoute>
+          } />
+          <Route path="my-tenders/:postId" element={
+            <ProtectedRoute requiredRoles={['customer']}>
+              <TenderQuotesPage />
+            </ProtectedRoute>
+          } />
           <Route path="wishlist" element={<WishlistPage />} />
           <Route path="addresses" element={<AddressManagementPage />} />
         </Route>

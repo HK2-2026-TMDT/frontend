@@ -3,8 +3,10 @@ import { WorkshopPageHeader } from '../../components/workshop/WorkshopPageHeader
 import { WorkshopLayout } from '../../layouts/WorkshopLayout';
 import {
   catalogService,
+  resolveCatalogAssetUrl,
   type Category,
   type Product,
+  type ProductImage,
   type ProductPayload,
 } from '../../services/endpoints/catalogService';
 import { formatWorkshopCurrency, formatWorkshopDate } from '../../utils/workshopUi';
@@ -19,7 +21,9 @@ const emptyForm = (categoryId = 0): ProductPayload => ({
 });
 
 const getProductThumbnail = (product: Product) =>
-  product.images?.find((img) => img.isThumbnail)?.imageUrl ?? product.images?.[0]?.imageUrl;
+  product.images?.find((img) => img.isThumbnail)?.imageUrl ??
+  product.images?.[0]?.imageUrl ??
+  product.thumbnailUrl;
 
 const getTotalStock = (product: Product) =>
   product.variants?.reduce((sum, variant) => sum + (variant.stockQuantity ?? 0), 0) ?? 0;
@@ -44,6 +48,10 @@ export const SampleProductPage = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<ProductPayload>(emptyForm());
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
+  const [imageManagerProduct, setImageManagerProduct] = useState<Product | null>(null);
+  const [managedImages, setManagedImages] = useState<ProductImage[]>([]);
+  const [loadingImages, setLoadingImages] = useState(false);
 
   const stats = useMemo(() => {
     const approved = items.filter((item) => item.approvalStatus === 'APPROVED').length;
@@ -84,6 +92,102 @@ export const SampleProductPage = () => {
   const closeForm = () => {
     setShowForm(false);
     setForm(emptyForm(categories[0]?.id ?? 0));
+    setPendingImages([]);
+  };
+
+  const handlePendingImagesSelect = (files: FileList | null) => {
+    if (!files?.length) return;
+    setPendingImages(Array.from(files));
+  };
+
+  const openImageManager = async (product: Product) => {
+    setImageManagerProduct(product);
+    setManagedImages([]);
+    setLoadingImages(true);
+    setError(null);
+
+    try {
+      const res = await catalogService.getProductById(product.id);
+      setManagedImages(res.data.data?.images ?? []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Không thể tải ảnh sản phẩm.');
+      setImageManagerProduct(null);
+    } finally {
+      setLoadingImages(false);
+    }
+  };
+
+  const closeImageManager = () => {
+    setImageManagerProduct(null);
+    setManagedImages([]);
+  };
+
+  const refreshManagedImages = async (productId: number) => {
+    const res = await catalogService.getProductById(productId);
+    setManagedImages(res.data.data?.images ?? []);
+    await loadProducts();
+  };
+
+  const uploadManagedImage = async (file: File, isThumbnail = false) => {
+    if (!imageManagerProduct) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      await catalogService.uploadProductImage(imageManagerProduct.id, file, isThumbnail);
+      setSuccessMessage('Đã tải ảnh lên.');
+      await refreshManagedImages(imageManagerProduct.id);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Không thể tải ảnh lên.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setManagedThumbnail = async (image: ProductImage) => {
+    if (!imageManagerProduct) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      await catalogService.replaceProductImages(
+        imageManagerProduct.id,
+        managedImages.map((item) => ({
+          imageUrl: item.imageUrl,
+          isThumbnail: item.id === image.id,
+        })),
+      );
+      setSuccessMessage('Đã đặt ảnh bìa.');
+      await refreshManagedImages(imageManagerProduct.id);
+    } catch (thumbError) {
+      setError(thumbError instanceof Error ? thumbError.message : 'Không thể đặt ảnh bìa.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteManagedImage = async (image: ProductImage) => {
+    if (!imageManagerProduct) return;
+    if (!window.confirm('Xóa ảnh này?')) return;
+
+    const remaining = managedImages.filter((item) => item.id !== image.id);
+    setSaving(true);
+    setError(null);
+    try {
+      await catalogService.replaceProductImages(
+        imageManagerProduct.id,
+        remaining.map((item, index) => ({
+          imageUrl: item.imageUrl,
+          isThumbnail: Boolean(item.isThumbnail) || (index === 0 && !remaining.some((r) => r.isThumbnail)),
+        })),
+      );
+      setSuccessMessage('Đã xóa ảnh.');
+      await refreshManagedImages(imageManagerProduct.id);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Không thể xóa ảnh.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const saveProduct = async () => {
@@ -94,14 +198,24 @@ export const SampleProductPage = () => {
     setSuccessMessage(null);
 
     try {
-      await catalogService.createProduct({
+      const res = await catalogService.createProduct({
         ...form,
         name: form.name.trim(),
         description: form.description?.trim() || undefined,
         basePrice: Number(form.basePrice) || 0,
         variants: [{ stockQuantity: Number(form.variants?.[0]?.stockQuantity) || 0 }],
       });
-      setSuccessMessage('Đã gửi sản phẩm chờ admin duyệt.');
+      const createdId = res.data.data?.id;
+      if (createdId && pendingImages.length > 0) {
+        for (let i = 0; i < pendingImages.length; i += 1) {
+          await catalogService.uploadProductImage(createdId, pendingImages[i], i === 0);
+        }
+      }
+      setSuccessMessage(
+        pendingImages.length > 0
+          ? 'Đã gửi sản phẩm và ảnh — chờ admin duyệt.'
+          : 'Đã gửi sản phẩm chờ admin duyệt.',
+      );
       closeForm();
       await loadProducts();
     } catch (saveError) {
@@ -219,7 +333,11 @@ export const SampleProductPage = () => {
                 >
                   <div className="relative aspect-[4/3] bg-surface-container">
                     {thumbnail ? (
-                      <img src={thumbnail} alt={item.name} className="h-full w-full object-cover" />
+                      <img
+                        src={resolveCatalogAssetUrl(thumbnail)}
+                        alt={item.name}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <div className="flex h-full items-center justify-center text-on-surface-variant">
                         <span className="material-symbols-outlined text-5xl opacity-40">image</span>
@@ -263,6 +381,14 @@ export const SampleProductPage = () => {
                       </div>
 
                       <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void openImageManager(item)}
+                          disabled={saving}
+                          className="rounded-lg border border-secondary/30 px-3 py-2 text-xs font-semibold text-secondary hover:bg-secondary/5 disabled:opacity-50"
+                        >
+                          Ảnh
+                        </button>
                         <button
                           type="button"
                           onClick={() => void toggleVisibility(item)}
@@ -395,6 +521,37 @@ export const SampleProductPage = () => {
                   className="w-full resize-none rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-secondary"
                 />
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-on-surface">Ảnh sản phẩm</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handlePendingImagesSelect(e.target.files)}
+                  className="block w-full text-sm text-on-surface-variant file:mr-3 file:rounded-lg file:border-0 file:bg-secondary/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-secondary"
+                />
+                {pendingImages.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {pendingImages.map((file, index) => (
+                      <div key={`${file.name}-${index}`} className="relative overflow-hidden rounded-xl border border-outline-variant">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          className="aspect-square w-full object-cover"
+                        />
+                        {index === 0 ? (
+                          <span className="absolute left-2 top-2 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-white">
+                            Ảnh bìa
+                          </span>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-on-surface-variant">Ảnh đầu tiên sẽ được dùng làm ảnh bìa.</p>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-3 border-t border-outline-variant px-5 py-4">
@@ -413,6 +570,110 @@ export const SampleProductPage = () => {
               >
                 {saving ? 'Đang lưu…' : 'Lưu sản phẩm'}
               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {imageManagerProduct ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+          <div
+            className="absolute inset-0"
+            onClick={closeImageManager}
+            onKeyDown={(e) => e.key === 'Escape' && closeImageManager()}
+            role="button"
+            tabIndex={-1}
+            aria-label="Đóng"
+          />
+          <div className="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-surface shadow-xl">
+            <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
+              <div>
+                <h2 className="text-lg font-bold text-on-surface">Quản lý ảnh</h2>
+                <p className="text-sm text-on-surface-variant">{imageManagerProduct.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeImageManager}
+                className="rounded-lg p-2 text-on-surface-variant hover:bg-surface-container"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4 overflow-y-auto px-5 py-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-secondary px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90">
+                  <span className="material-symbols-outlined text-base">upload</span>
+                  Thêm ảnh
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={saving}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void uploadManagedImage(file, managedImages.length === 0);
+                      e.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <p className="text-xs text-on-surface-variant">Hỗ trợ JPG, PNG, WEBP.</p>
+              </div>
+
+              {loadingImages ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="aspect-square animate-pulse rounded-xl bg-surface-container" />
+                  ))}
+                </div>
+              ) : managedImages.length ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {managedImages.map((image) => (
+                    <div
+                      key={image.id}
+                      className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container"
+                    >
+                      <div className="relative aspect-square">
+                        <img
+                          src={resolveCatalogAssetUrl(image.imageUrl)}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                        {image.isThumbnail ? (
+                          <span className="absolute left-2 top-2 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-white">
+                            Ảnh bìa
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="flex gap-1 p-2">
+                        {!image.isThumbnail ? (
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => void setManagedThumbnail(image)}
+                            className="flex-1 rounded-lg border border-outline-variant px-2 py-1.5 text-[11px] font-semibold text-on-surface hover:bg-surface-container-high disabled:opacity-50"
+                          >
+                            Đặt bìa
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => void deleteManagedImage(image)}
+                          className="rounded-lg border border-error/30 px-2 py-1.5 text-[11px] font-semibold text-error hover:bg-error/5 disabled:opacity-50"
+                        >
+                          Xóa
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-outline-variant px-4 py-10 text-center">
+                  <span className="material-symbols-outlined text-4xl text-outline">image</span>
+                  <p className="mt-3 text-sm text-on-surface-variant">Chưa có ảnh nào. Tải ảnh đầu tiên để hiển thị sản phẩm.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

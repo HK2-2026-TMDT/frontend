@@ -102,7 +102,7 @@ export const PostTenderPage = () => {
 
   useEffect(() => {
     let mounted = true;
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || user?.role !== 'customer') return;
 
     const loadDesigns = async () => {
       setIsLoadingDesigns(true);
@@ -131,11 +131,11 @@ export const PostTenderPage = () => {
       }
     };
 
-    void loadDesigns();
+    void     loadDesigns();
     return () => {
       mounted = false;
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.role]);
 
   const setField = (key: keyof typeof baseForm, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -300,13 +300,21 @@ export const PostTenderPage = () => {
               <p className="font-semibold">{submitSuccess.message}</p>
               <p className="text-green-700/80 mt-1">Mã bài đăng: #{submitSuccess.postId}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setSubmitSuccess(null)}
-              className="px-4 py-2 rounded-xl border border-green-500/30 bg-white text-green-700 font-medium hover:bg-green-50 transition-all"
-            >
-              Đóng
-            </button>
+            <div className="flex gap-2">
+              <Link
+                to={`/my-tenders/${submitSuccess.postId}`}
+                className="px-4 py-2 rounded-xl bg-secondary text-white font-medium hover:opacity-90 transition-all"
+              >
+                Xem báo giá
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSubmitSuccess(null)}
+                className="px-4 py-2 rounded-xl border border-green-500/30 bg-white text-green-700 font-medium hover:bg-green-50 transition-all"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         )}
 

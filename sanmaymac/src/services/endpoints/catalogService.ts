@@ -33,6 +33,7 @@ export interface Product {
   categoryName?: string;
   workshopId: number;
   workshopName?: string;
+  thumbnailUrl?: string;
   variants?: ProductVariant[];
   images?: ProductImage[];
   averageRating?: number;
@@ -119,6 +120,22 @@ export const catalogService = {
   updateProductVisibility: (productId: number, isVisible: boolean) =>
     api.put<ApiResponse<Product>>(`/catalog/products/${productId}/visibility`, { isVisible }),
 
+  uploadProductImage: (productId: number, file: File, isThumbnail = false) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return api.post<ApiResponse<Product>>(
+      `/catalog/products/${productId}/images/upload`,
+      formData,
+      {
+        params: { isThumbnail },
+        headers: { 'Content-Type': 'multipart/form-data' },
+      },
+    );
+  },
+
+  replaceProductImages: (productId: number, images: ProductPayloadImage[]) =>
+    api.put<ApiResponse<Product>>(`/catalog/products/${productId}/images`, images),
+
   getFavoriteProducts: () =>
     (() => {
       const userId = useAuthStore.getState().user?.id;
@@ -155,4 +172,14 @@ export const catalogService = {
       }
       return res;
     }),
+};
+
+export const resolveCatalogAssetUrl = (url?: string | null) => {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+
+  const apiBase = (api.defaults.baseURL || 'http://localhost:8080/api').replace(/\/+$/, '');
+  const backendOrigin = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase;
+  const normalizedPath = url.startsWith('/') ? url : `/${url}`;
+  return `${backendOrigin}${normalizedPath}`;
 };

@@ -8,6 +8,7 @@ const navLinks = [
   { to: '/workshop-directory', label: 'Xưởng Gia Công', exact: false },
   { to: '/products', label: 'Sản phẩm', exact: false },
   { to: '/create-tender', label: 'Đấu Thầu', exact: false },
+  { to: '/my-tenders', label: 'Báo giá của tôi', exact: false, customerOnly: true },
 ];
 
 const roleLabel: Record<string, string> = {
@@ -48,7 +49,9 @@ const Header = () => {
 
           {/* Nav — desktop */}
           <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
+            {navLinks
+              .filter((link) => !link.customerOnly || user?.role === 'customer')
+              .map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
@@ -169,6 +172,15 @@ const Header = () => {
                       <span className="material-symbols-outlined text-[18px] text-on-surface-variant">location_on</span>
                       Quản lý địa chỉ
                     </Link>
+                    {user.role === 'customer' && (
+                      <Link
+                        to="/my-tenders"
+                        className="flex items-center gap-3 px-3 py-2 text-sm text-on-surface hover:bg-surface-container rounded-xl transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">request_quote</span>
+                        Báo giá của tôi
+                      </Link>
+                    )}
 
                     {user.role === 'workshop' && (
                       <Link

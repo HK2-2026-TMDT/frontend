@@ -39,6 +39,13 @@ const CATEGORY_ICONS: Record<string, { icon: string; color: string }> = {
 };
 const DEFAULT_ICON = { icon: 'category', color: 'bg-gray-50 text-gray-600' };
 
+/** Ảnh hero — may mặc, đồng phục, xưởng gia công (Unsplash) */
+const HERO_IMAGES = {
+  main: 'https://images.unsplash.com/photo-1558178048-4ed784c13c60?w=900&h=700&fit=crop&q=80',
+  uniform: 'https://images.unsplash.com/photo-1523381219134-561b8a2a8b1a?w=500&h=400&fit=crop&q=80',
+  sewing: 'https://images.unsplash.com/photo-1584975019783-993861650fbf?w=500&h=400&fit=crop&q=80',
+};
+
 const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫';
 
 const getThumbnail = (product: Product) =>
