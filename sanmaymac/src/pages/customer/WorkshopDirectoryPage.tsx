@@ -203,9 +203,9 @@ export const WorkshopDirectoryPage = () => {
                     >
                       {/* Cover */}
                       <div className="h-48 overflow-hidden relative bg-gradient-to-br from-primary/10 to-secondary/10">
-                        {ws.avatarUrl ? (
+                        {(ws.avatarUrl ?? ws.logoUrl) ? (
                           <img
-                            src={ws.avatarUrl}
+                            src={ws.avatarUrl ?? ws.logoUrl}
                             alt={ws.shopName}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
@@ -284,8 +284,8 @@ export const WorkshopDirectoryPage = () => {
                     >
                       {/* Avatar */}
                       <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
-                        {ws.avatarUrl ? (
-                          <img src={ws.avatarUrl} alt={ws.shopName} className="w-full h-full object-cover" />
+                        {(ws.avatarUrl ?? ws.logoUrl) ? (
+                          <img src={ws.avatarUrl ?? ws.logoUrl} alt={ws.shopName} className="w-full h-full object-cover" />
                         ) : (
                           <span className="material-symbols-outlined text-3xl text-primary/30">factory</span>
                         )}

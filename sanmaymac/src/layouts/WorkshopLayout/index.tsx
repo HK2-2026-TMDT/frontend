@@ -14,16 +14,50 @@ const getInitials = (value?: string) => {
     .toUpperCase();
 };
 
-const WORKSHOP_MENU_ITEMS = [
-  { label: 'Tổng quan', icon: 'dashboard', path: '/workshop/dashboard' },
-  { label: 'Sản phẩm', icon: 'inventory_2', path: '/workshop/products' },
-  { label: 'Sản xuất', icon: 'precision_manufacturing', path: '/workshop/production' },
-  { label: 'Chợ đấu thầu', icon: 'storefront', path: '/workshop/marketplace' },
-  { label: 'Báo giá', icon: 'request_quote', path: '/workshop/quotes' },
-  { label: 'Tin nhắn', icon: 'chat', path: '/workshop/messages' },
-  { label: 'Tài chính', icon: 'account_balance_wallet', path: '/workshop/finance' },
-  { label: 'Thiết lập xưởng', icon: 'settings_applications', path: '/workshop/settings' },
+type WorkshopMenuLink = {
+  type: 'link';
+  label: string;
+  icon: string;
+  path: string;
+};
+
+type WorkshopMenuGroup = {
+  type: 'group';
+  label: string;
+  icon: string;
+  children: Array<{ label: string; path: string }>;
+};
+
+type WorkshopMenuItem = WorkshopMenuLink | WorkshopMenuGroup;
+
+const ORDER_MENU_PATHS = [
+  '/workshop/ready-made-orders',
+  '/workshop/production-management',
+  '/workshop/production',
 ] as const;
+
+const isOrderMenuPath = (pathname: string) =>
+  ORDER_MENU_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
+const WORKSHOP_MENU_ITEMS: WorkshopMenuItem[] = [
+  { type: 'link', label: 'Tổng quan', icon: 'dashboard', path: '/workshop/dashboard' },
+  { type: 'link', label: 'Sản phẩm', icon: 'inventory_2', path: '/workshop/products' },
+  {
+    type: 'group',
+    label: 'Đơn hàng',
+    icon: 'receipt_long',
+    children: [
+      { label: 'Mẫu sẵn', path: '/workshop/ready-made-orders' },
+      { label: 'Gia công', path: '/workshop/production-management' },
+    ],
+  },
+  { type: 'link', label: 'Yêu cầu gia công', icon: 'storefront', path: '/workshop/marketplace' },
+  { type: 'link', label: 'Báo giá', icon: 'request_quote', path: '/workshop/quotes' },
+  { type: 'link', label: 'Đánh giá', icon: 'reviews', path: '/workshop/reviews' },
+  { type: 'link', label: 'Tin nhắn', icon: 'chat', path: '/workshop/messages' },
+  { type: 'link', label: 'Tài chính', icon: 'account_balance_wallet', path: '/workshop/finance' },
+  { type: 'link', label: 'Thiết lập xưởng', icon: 'settings_applications', path: '/workshop/settings' },
+];
 
 export const WorkshopLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
@@ -32,8 +66,13 @@ export const WorkshopLayout = ({ children }: { children: ReactNode }) => {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [ordersMenuOpen, setOrdersMenuOpen] = useState(() => isOrderMenuPath(location.pathname));
 
-  const menuItems = WORKSHOP_MENU_ITEMS;
+  useEffect(() => {
+    if (isOrderMenuPath(location.pathname)) {
+      setOrdersMenuOpen(true);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     let mounted = true;
@@ -63,10 +102,23 @@ export const WorkshopLayout = ({ children }: { children: ReactNode }) => {
   const avatarText = useMemo(() => getInitials(profile?.shopName || profile?.fullName), [profile?.shopName, profile?.fullName]);
 
   const currentPageLabel = useMemo(() => {
-    const match = [...menuItems]
-      .sort((a, b) => b.path.length - a.path.length)
-      .find((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`));
-    return match?.label ?? 'Bách Xưởng';
+    for (const item of WORKSHOP_MENU_ITEMS) {
+      if (item.type === 'link') {
+        if (location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)) {
+          return item.label;
+        }
+        continue;
+      }
+
+      const child = [...item.children]
+        .sort((a, b) => b.path.length - a.path.length)
+        .find((entry) => location.pathname === entry.path || location.pathname.startsWith(`${entry.path}/`));
+      if (child) return child.label;
+
+      if (isOrderMenuPath(location.pathname)) return 'Đơn hàng';
+    }
+
+    return 'Bách Xưởng';
   }, [location.pathname]);
 
   const isActive = (path: string) =>
@@ -93,20 +145,69 @@ export const WorkshopLayout = ({ children }: { children: ReactNode }) => {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {menuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${
-                isActive(item.path)
-                  ? 'bg-secondary text-white shadow-md'
-                  : 'text-white/75 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <span className="material-symbols-outlined text-xl">{item.icon}</span>
-              <span className="text-sm font-medium">{item.label}</span>
-            </Link>
-          ))}
+          {WORKSHOP_MENU_ITEMS.map((item) => {
+            if (item.type === 'link') {
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${
+                    isActive(item.path)
+                      ? 'bg-secondary text-white shadow-md'
+                      : 'text-white/75 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                  <span className="text-sm font-medium">{item.label}</span>
+                </Link>
+              );
+            }
+
+            const groupActive = isOrderMenuPath(location.pathname);
+
+            return (
+              <div key={item.label} className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setOrdersMenuOpen((open) => !open)}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all ${
+                    groupActive
+                      ? 'bg-secondary/20 text-white'
+                      : 'text-white/75 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                  <span className="flex-1 text-sm font-medium">{item.label}</span>
+                  <span
+                    className={`material-symbols-outlined text-lg transition-transform ${
+                      ordersMenuOpen ? 'rotate-180' : ''
+                    }`}
+                  >
+                    expand_more
+                  </span>
+                </button>
+
+                {ordersMenuOpen ? (
+                  <div className="ml-4 space-y-1 border-l border-white/15 pl-3">
+                    {item.children.map((child) => (
+                      <Link
+                        key={child.path}
+                        to={child.path}
+                        className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-all ${
+                          isActive(child.path)
+                            ? 'bg-secondary font-semibold text-white shadow-md'
+                            : 'text-white/70 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-base opacity-80">subdirectory_arrow_right</span>
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="border-t border-white/10 p-4">

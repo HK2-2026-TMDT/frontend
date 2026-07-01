@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CustomerLayout } from '../../layouts/CustomerLayout';
-import { workshopService, PublicWorkshop } from '../../services/endpoints/workshopService';
-import { catalogService, Product } from '../../services/endpoints/catalogService';
+import { workshopService, PublicWorkshop, PortfolioItem } from '../../services/endpoints/workshopService';
+import { catalogService, Product, getProductThumbnailUrl } from '../../services/endpoints/catalogService';
 import api from '../../services/api';
 import { ApiResponse } from '../../types';
 
@@ -32,9 +32,7 @@ interface PageResponse<T> {
 
 const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫';
 
-const getThumbnail = (product: Product) =>
-  product.images?.find((i) => i.isThumbnail)?.imageUrl ??
-  product.images?.[0]?.imageUrl ?? '';
+const getThumbnail = (product: Product) => getProductThumbnailUrl(product);
 
 const formatDate = (iso: string) => {
   try {
@@ -76,6 +74,8 @@ export const WorkshopProfilePage = () => {
   const [loadingWorkshop, setLoadingWorkshop] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [loadingReviews, setLoadingReviews] = useState(true);
+  const [loadingPortfolio, setLoadingPortfolio] = useState(true);
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [tab, setTab] = useState<'products' | 'about' | 'reviews'>('products');
@@ -100,6 +100,17 @@ export const WorkshopProfilePage = () => {
       .then((res) => setProducts(res.data.data?.content ?? []))
       .catch(() => setProducts([]))
       .finally(() => setLoadingProducts(false));
+  }, [workshopId]);
+
+  // Fetch portfolio
+  useEffect(() => {
+    if (!workshopId) return;
+    setLoadingPortfolio(true);
+    workshopService
+      .getPublicWorkshopPortfolio(workshopId)
+      .then((res) => setPortfolio(res.data.data ?? []))
+      .catch(() => setPortfolio([]))
+      .finally(() => setLoadingPortfolio(false));
   }, [workshopId]);
 
   // Fetch review summary
@@ -146,6 +157,7 @@ export const WorkshopProfilePage = () => {
   }
 
   const initials = workshop.shopName?.slice(0, 2).toUpperCase() ?? 'WS';
+  const profileImage = workshop.avatarUrl ?? workshop.logoUrl;
   const rating = reviewSummary?.averageRating ?? workshop.ratingAvg ?? 0;
   const reviewCount = reviewSummary?.totalReviews ?? 0;
 
@@ -155,6 +167,10 @@ export const WorkshopProfilePage = () => {
       <div className="relative h-64 overflow-hidden bg-primary">
         {workshop.avatarUrl ? (
           <img src={workshop.avatarUrl} alt={workshop.shopName} className="w-full h-full object-cover opacity-60" />
+        ) : workshop.logoUrl ? (
+          <div className="w-full h-full bg-gradient-to-br from-primary to-secondary opacity-90 flex items-center justify-center">
+            <img src={workshop.logoUrl} alt={workshop.shopName} className="max-h-32 max-w-[280px] object-contain drop-shadow-lg" />
+          </div>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary to-secondary opacity-80" />
         )}
@@ -168,8 +184,8 @@ export const WorkshopProfilePage = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5">
             {/* Avatar */}
             <div className="w-20 h-20 rounded-2xl border-4 border-white shadow-md overflow-hidden flex-shrink-0 -mt-10 sm:-mt-12 bg-primary flex items-center justify-center">
-              {workshop.avatarUrl ? (
-                <img src={workshop.avatarUrl} alt={workshop.shopName} className="w-full h-full object-cover" />
+              {profileImage ? (
+                <img src={profileImage} alt={workshop.shopName} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-white text-2xl font-extrabold">{initials}</span>
               )}
@@ -307,7 +323,7 @@ export const WorkshopProfilePage = () => {
 
         {/* ── Tab: About ── */}
         {tab === 'about' && (
-          <div className="max-w-2xl mb-12 space-y-6">
+          <div className="max-w-4xl mb-12 space-y-8">
             {workshop.description ? (
               <p className="text-on-surface-variant font-body-md leading-relaxed">{workshop.description}</p>
             ) : (
@@ -331,6 +347,41 @@ export const WorkshopProfilePage = () => {
                     <p className="text-xs text-on-surface-variant font-bold uppercase tracking-wider mb-1">Năng lực sản xuất</p>
                     <p className="text-sm text-on-surface">{workshop.productionCapacity.toLocaleString()} sản phẩm/tháng</p>
                   </div>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h2 className="font-headline-sm text-on-surface mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary">collections</span>
+                Portfolio sản phẩm
+              </h2>
+              {loadingPortfolio ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-56 bg-surface-container rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              ) : portfolio.length === 0 ? (
+                <p className="text-on-surface-variant italic">Xưởng chưa cập nhật portfolio.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {portfolio.map((item) => (
+                    <article
+                      key={item.id}
+                      className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-md transition-shadow"
+                    >
+                      <div className="aspect-[4/3] bg-surface-container overflow-hidden">
+                        <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold text-on-surface text-sm mb-1">{item.title}</h3>
+                        {item.description && (
+                          <p className="text-on-surface-variant text-xs leading-relaxed line-clamp-3">{item.description}</p>
+                        )}
+                      </div>
+                    </article>
+                  ))}
                 </div>
               )}
             </div>

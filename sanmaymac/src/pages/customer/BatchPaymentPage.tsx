@@ -72,18 +72,29 @@ export const BatchPaymentPage = () => {
             <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-6 space-y-3">
               <h2 className="font-bold text-on-surface">Chi tiết theo xưởng</h2>
               {summary.orders.map((item) => (
-                <div key={item.orderId} className="flex justify-between items-center py-2 border-b border-outline-variant last:border-0">
+                <div key={item.orderId} className="flex flex-wrap justify-between items-center gap-3 py-2 border-b border-outline-variant last:border-0">
                   <div>
                     <p className="font-medium text-sm text-on-surface">#{item.orderId} · {item.workshopName ?? 'Xưởng'}</p>
                     <p className="text-xs text-on-surface-variant">Còn lại: {fmt(item.remainingAmount ?? 0)}</p>
                   </div>
-                  <span className="text-sm font-semibold">{fmt(item.totalAmount ?? 0)}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold">{fmt(item.totalAmount ?? 0)}</span>
+                    <Link
+                      to={`/orders/${item.orderId}/payment?standalone=1`}
+                      className="text-xs font-semibold text-secondary hover:underline whitespace-nowrap"
+                    >
+                      Thanh toán ví
+                    </Link>
+                  </div>
                 </div>
               ))}
             </section>
 
             <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-6 space-y-3">
-              <h2 className="font-bold text-on-surface">Thanh toán MoMo</h2>
+              <h2 className="font-bold text-on-surface">Thanh toán MoMo (gộp)</h2>
+              <p className="text-xs text-on-surface-variant">
+                Thanh toán ví từng đơn: dùng liên kết &quot;Thanh toán ví&quot; ở bảng trên.
+              </p>
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => void handleMomo('deposit')}

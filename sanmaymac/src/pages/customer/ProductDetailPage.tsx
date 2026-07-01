@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { CustomerLayout } from '../../layouts/CustomerLayout';
-import { catalogService, Product, ProductVariant } from '../../services/endpoints/catalogService';
+import { catalogService, Product, ProductVariant, resolveCatalogAssetUrl } from '../../services/endpoints/catalogService';
 import { useCartStore } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import api from '../../services/api';
@@ -33,15 +33,7 @@ interface PageResponse<T> {
 
 const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫';
 
-const resolveAssetUrl = (url?: string) => {
-  if (!url) return '';
-  if (/^https?:\/\//i.test(url)) return url;
-
-  const apiBase = (api.defaults.baseURL || 'http://localhost:8080/api').replace(/\/+$/, '');
-  const backendOrigin = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase;
-  const normalizedPath = url.startsWith('/') ? url : `/${url}`;
-  return `${backendOrigin}${normalizedPath}`;
-};
+const resolveAssetUrl = resolveCatalogAssetUrl;
 
 const formatDate = (iso: string) => {
   try { return new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }); }

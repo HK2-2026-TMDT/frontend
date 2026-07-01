@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerLayout } from '../../layouts/CustomerLayout';
-import { catalogService, Product } from '../../services/endpoints/catalogService';
+import { catalogService, Product, getProductThumbnailUrl } from '../../services/endpoints/catalogService';
 import { cacheKeys, cacheService, cacheTtl } from '../../services/cache';
 import { useAuthStore } from '../../store/useAuthStore';
 
 const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫';
 
-const getThumbnail = (product: Product) =>
-  product.images?.find((i) => i.isThumbnail)?.imageUrl ??
-  product.images?.[0]?.imageUrl ?? '';
+const getThumbnail = (product: Product) => getProductThumbnailUrl(product);
 
 export const WishlistPage = () => {
   const [items, setItems] = useState<Product[]>([]);

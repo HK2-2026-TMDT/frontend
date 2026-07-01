@@ -13,6 +13,7 @@ export interface ProductImage {
   id: number;
   imageUrl: string;
   isThumbnail: boolean;
+  sortOrder?: number;
 }
 
 export interface ProductVariant {
@@ -42,6 +43,8 @@ export interface Product {
   isVisible?: boolean;
   approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
   adminNote?: string;
+  variantCount?: number;
+  imageCount?: number;
   createdAt: string;
 }
 
@@ -64,6 +67,7 @@ export interface ProductPayloadVariant {
 export interface ProductPayloadImage {
   imageUrl: string;
   isThumbnail?: boolean;
+  sortOrder?: number;
 }
 
 export interface ProductPayload {
@@ -136,6 +140,18 @@ export const catalogService = {
   replaceProductImages: (productId: number, images: ProductPayloadImage[]) =>
     api.put<ApiResponse<Product>>(`/catalog/products/${productId}/images`, images),
 
+  addVariant: (productId: number, payload: ProductPayloadVariant) =>
+    api.post<ApiResponse<ProductVariant>>(`/catalog/products/${productId}/variants`, payload),
+
+  updateVariant: (variantId: number, payload: ProductPayloadVariant) =>
+    api.put<ApiResponse<ProductVariant>>(`/catalog/variants/${variantId}`, payload),
+
+  updateVariantStock: (variantId: number, stockQuantity: number) =>
+    api.put<ApiResponse<ProductVariant>>(`/catalog/variants/${variantId}/stock`, { stockQuantity }),
+
+  deleteVariant: (variantId: number) =>
+    api.delete<ApiResponse<null>>(`/catalog/variants/${variantId}`),
+
   getFavoriteProducts: () =>
     (() => {
       const userId = useAuthStore.getState().user?.id;
@@ -182,4 +198,17 @@ export const resolveCatalogAssetUrl = (url?: string | null) => {
   const backendOrigin = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase;
   const normalizedPath = url.startsWith('/') ? url : `/${url}`;
   return `${backendOrigin}${normalizedPath}`;
+};
+
+/** Ảnh đại diện sản phẩm — list API trả thumbnailUrl, detail API trả images[]. */
+export const getProductThumbnailUrl = (
+  product?: Pick<Product, 'thumbnailUrl' | 'images'> | null,
+) => {
+  if (!product) return '';
+  const raw =
+    product.thumbnailUrl ??
+    product.images?.find((i) => i.isThumbnail)?.imageUrl ??
+    product.images?.[0]?.imageUrl ??
+    '';
+  return resolveCatalogAssetUrl(raw);
 };

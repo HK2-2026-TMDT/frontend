@@ -38,12 +38,42 @@ export const OrderHistoryPage = () => {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(
     (location.state as { checkoutMessage?: string } | null)?.checkoutMessage ?? null,
   );
   const [searchParams] = useSearchParams();
 
   const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫';
+
+  const reloadOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await orderService.getMyOrders({ page: 0, size: 50, sort: 'createdAt,desc' });
+      setOrders(response.data.data?.content ?? []);
+    } catch {
+      setError('Không thể tải đơn hàng. Vui lòng thử lại.');
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = async (orderId: number) => {
+    if (!window.confirm('Hủy đơn hàng này?')) return;
+    setCancellingId(orderId);
+    setError(null);
+    try {
+      await orderService.cancelOrder(orderId);
+      setSuccessMessage('Đã hủy đơn hàng thành công.');
+      await reloadOrders();
+    } catch {
+      setError('Không thể hủy đơn hàng.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -202,6 +232,16 @@ export const OrderHistoryPage = () => {
                     >
                       Xem chi tiết
                     </Link>
+                    {order.status === 'PENDING' && (
+                      <button
+                        type="button"
+                        disabled={cancellingId === order.id}
+                        onClick={() => void handleCancel(order.id)}
+                        className="px-4 py-2 border border-error text-error rounded-lg text-sm font-medium hover:bg-error/5 disabled:opacity-50 transition-colors"
+                      >
+                        {cancellingId === order.id ? 'Đang hủy…' : 'Hủy đơn'}
+                      </button>
+                    )}
                     {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
                       <Link
                         to={order.checkoutBatchId ? `/payment/batch/${order.checkoutBatchId}` : `/orders/${order.id}/payment`}

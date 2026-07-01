@@ -14,6 +14,9 @@ export const AdminLayout = ({ children }: { children: ReactNode }) => {
     { label: 'Quản lý Người dùng', icon: 'group', path: '/admin/users' },
     { label: 'Mã giảm giá', icon: 'local_offer', path: '/admin/coupons' },
     { label: 'Yêu cầu rút tiền', icon: 'payments', path: '/admin/withdrawals' },
+    { label: 'Khiếu nại', icon: 'report', path: '/admin/complaints' },
+    { label: 'Tranh chấp', icon: 'gavel', path: '/admin/disputes' },
+    { label: 'Tin nhắn', icon: 'chat', path: '/admin/messages' },
     { label: 'Quản trị Nội dung', icon: 'article', path: '/admin/cms' },
     { label: 'Cấu hình hệ thống', icon: 'settings', path: '/admin/settings' },
   ];

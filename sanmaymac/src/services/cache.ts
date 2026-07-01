@@ -56,7 +56,8 @@ export const cacheService = {
 };
 
 export const cacheKeys = {
-  categories: 'catalog:categories',
+  /** v2 — bust cache sau khi đổi seed/danh mục backend */
+  categories: 'catalog:categories:v2',
   customerProfile: 'customer:profile',
   favoriteProducts: (userId: string | number) => `catalog:favorites:${userId}`,
 };

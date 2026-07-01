@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState, type SyntheticEvent } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { CustomerLayout } from '../../layouts/CustomerLayout';
 import { useAuthStore } from '../../store/useAuthStore';
 import { biddingService, type SavedDesignResponse } from '../../services/endpoints/biddingService';
-import { DesignStudioCanvas, type DesignStudioHandle } from '../../features/design-studio/components/DesignStudioCanvas';
 
 const quantities = ['< 100 cái', '100 – 500 cái', '500 – 1,000 cái', '1,000 – 5,000 cái', '> 5,000 cái'];
 const budgets = ['< 10 triệu', '10 – 50 triệu', '50 – 200 triệu', '> 200 triệu'];
@@ -61,16 +60,16 @@ const composeDescription = (
 
 export const PostTenderPage = () => {
   const navigate = useNavigate();
-  const designRef = useRef<DesignStudioHandle>(null);
+  const location = useLocation();
   const { isAuthenticated, user } = useAuthStore();
+  const returnDesignId = (location.state as { selectedDesignId?: number; designSaved?: boolean } | null)?.selectedDesignId;
+  const designJustSaved = (location.state as { designSaved?: boolean } | null)?.designSaved;
 
   const [form, setForm] = useState(baseForm);
   const [designs, setDesigns] = useState<SavedDesign[]>([]);
   const [selectedDesignId, setSelectedDesignId] = useState<number | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [isLoadingDesigns, setIsLoadingDesigns] = useState(false);
-  const [isStudioOpen, setIsStudioOpen] = useState(false);
-  const [isSavingDesign, setIsSavingDesign] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<{ postId: number; message: string } | null>(null);
@@ -119,7 +118,11 @@ export const PostTenderPage = () => {
             createdAt: item.createdAt,
           }))
         );
-        setSelectedDesignId(items[0]?.id ?? null);
+        const preferredId =
+          returnDesignId && items.some((item) => item.id === returnDesignId)
+            ? returnDesignId
+            : items[0]?.id ?? null;
+        setSelectedDesignId(preferredId);
       } catch {
         if (mounted) {
           setSubmitError('Không thể tải danh sách thiết kế đã lưu.');
@@ -131,11 +134,11 @@ export const PostTenderPage = () => {
       }
     };
 
-    void     loadDesigns();
+    void loadDesigns();
     return () => {
       mounted = false;
     };
-  }, [isAuthenticated, user?.role]);
+  }, [isAuthenticated, user?.role, returnDesignId]);
 
   const setField = (key: keyof typeof baseForm, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -154,38 +157,6 @@ export const PostTenderPage = () => {
           ? prev.title
           : `Cần báo giá sản xuất ${nextProduct.name}`,
     }));
-  };
-
-  const handleSaveDesign = async () => {
-    if (!designRef.current?.hasDesign()) {
-      setSubmitError('Hãy thêm ít nhất một sticker trước khi lưu thiết kế.');
-      return;
-    }
-
-    setIsSavingDesign(true);
-    setSubmitError(null);
-
-    try {
-      const { frontDesign, backDesign } = await designRef.current.exportDesigns();
-      const saveRes = await biddingService.saveDesign(frontDesign, backDesign);
-      const saved = saveRes.data.data;
-      const nextDesign: SavedDesign = {
-        id: saved.id,
-        name: saved.name,
-        frontDesignUrl: saved.frontDesignUrl,
-        backDesignUrl: saved.backDesignUrl,
-        createdAt: saved.createdAt,
-      };
-
-      setDesigns((prev) => [nextDesign, ...prev]);
-      setSelectedDesignId(nextDesign.id);
-      designRef.current.clearActiveCanvas();
-      setIsStudioOpen(false);
-    } catch {
-      setSubmitError('Không thể lưu thiết kế lúc này. Vui lòng thử lại.');
-    } finally {
-      setIsSavingDesign(false);
-    }
   };
 
   const markBroken = (key: string) => (event: SyntheticEvent<HTMLImageElement>) => {
@@ -288,6 +259,12 @@ export const PostTenderPage = () => {
           </div>
         </div>
 
+        {designJustSaved && (
+          <div className="mb-6 rounded-2xl border border-green-500/30 bg-green-500/5 px-4 py-3 text-sm text-green-700">
+            Thiết kế đã lưu thành công. Chọn sản phẩm và hoàn tất brief để đăng nhận báo giá.
+          </div>
+        )}
+
         {submitError && (
           <div className="mb-6 rounded-2xl border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">
             {submitError}
@@ -329,14 +306,13 @@ export const PostTenderPage = () => {
                     Mặc định xem mặt trước, hover để xem mặt sau. Chọn một thiết kế để dùng khi đăng nhận báo giá.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsStudioOpen(true)}
+                <Link
+                  to="/design-studio"
                   className="inline-flex items-center justify-center gap-2 btn-user-primary-sm"
                 >
                   <span className="material-symbols-outlined text-base">add</span>
                   Tạo thiết kế mới
-                </button>
+                </Link>
               </div>
 
               {isLoadingDesigns ? (
@@ -352,14 +328,13 @@ export const PostTenderPage = () => {
                   <p className="text-sm text-on-surface-variant mt-2 max-w-xl mx-auto">
                     Nhấn “Tạo thiết kế mới”, hoàn thiện mockup và lưu lại. Thiết kế đó sẽ xuất hiện ngay tại dashboard này.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setIsStudioOpen(true)}
-                    className="mt-6 btn-user-outline-md"
+                  <Link
+                    to="/design-studio"
+                    className="mt-6 btn-user-outline-md inline-flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-base">brush</span>
                     Bắt đầu thiết kế
-                  </button>
+                  </Link>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -637,52 +612,6 @@ export const PostTenderPage = () => {
           </aside>
         </div>
       </main>
-
-      {isStudioOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4">
-          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsStudioOpen(false)} />
-
-          <div className="relative z-10 flex h-[min(900px,94vh)] w-[min(1280px,98vw)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-4 py-3 sm:px-5">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-600">Design Studio</p>
-                <h3 className="truncate text-base font-bold text-slate-900 sm:text-lg">Tạo thiết kế mới</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsStudioOpen(false)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-800"
-                aria-label="Đóng modal thiết kế"
-              >
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
-            </header>
-
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <DesignStudioCanvas ref={designRef} />
-            </div>
-
-            <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:px-5">
-              <button
-                type="button"
-                onClick={() => setIsStudioOpen(false)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveDesign}
-                disabled={isSavingDesign}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-indigo-700 disabled:opacity-60"
-              >
-                <span className="material-symbols-outlined text-base">{isSavingDesign ? 'hourglass_empty' : 'save'}</span>
-                {isSavingDesign ? 'Đang lưu...' : 'Lưu thiết kế'}
-              </button>
-            </footer>
-          </div>
-        </div>
-      )}
     </CustomerLayout>
   );
 };

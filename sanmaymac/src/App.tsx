@@ -27,8 +27,11 @@ import { PaymentPage } from './pages/customer/PaymentPage';
 import { BatchPaymentPage } from './pages/customer/BatchPaymentPage';
 import { MomoReturnPage } from './pages/customer/MomoReturnPage';
 import { PostTenderPage } from './pages/customer/PostTenderPage';
+import { DesignStudioPage } from './pages/customer/DesignStudioPage';
 import { MyTendersPage } from './pages/customer/MyTendersPage';
 import { TenderQuotesPage } from './pages/customer/TenderQuotesPage';
+import { MyReviewsPage } from './pages/customer/MyReviewsPage';
+import { CustomerMessagesPage } from './pages/customer/MessagesPage';
 import { WishlistPage } from './pages/customer/WishlistPage';
 import { AddressManagementPage } from './pages/customer/AddressManagementPage';
 
@@ -43,7 +46,9 @@ import { WorkshopFinancialPage } from './pages/workshop/FinancialPage';
 import { WorkshopProfileSettingsPage } from './pages/workshop/ProfileSettingsPage';
 import { MessagesPage } from './pages/workshop/MessagesPage';
 import { ProfileSetupPage } from './pages/workshop/ProfileSetupPage';
-import { ProductionManagementPage } from './pages/workshop/ProductionManagementPage';
+import { ProductionManagementPage, CustomOrderManagementPage } from './pages/workshop/ProductionManagementPage';
+import { WorkshopOrderDetailPage } from './pages/workshop/WorkshopOrderDetailPage';
+import { WorkshopReviewsPage } from './pages/workshop/WorkshopReviewsPage';
 
 // Admin Pages
 import { AdminDashboardPage } from './pages/admin/DashboardPage';
@@ -54,6 +59,9 @@ import { AdminCMSPage } from './pages/admin/CMSPage';
 import { AdminSettingsPage } from './pages/admin/SettingsPage';
 import { AdminCouponManagementPage } from './pages/admin/CouponManagementPage';
 import { AdminProductAuditPage } from './pages/admin/ProductAuditPage';
+import { AdminMessagesPage } from './pages/admin/MessagesPage';
+import { AdminComplaintManagementPage } from './pages/admin/ComplaintManagementPage';
+import { AdminDisputeManagementPage } from './pages/admin/DisputeManagementPage';
 
 export function App() {
   const { login, logout, isAuthenticated, user } = useAuthStore();
@@ -145,6 +153,11 @@ export function App() {
               <PostTenderPage />
             </ProtectedRoute>
           } />
+          <Route path="design-studio" element={
+            <ProtectedRoute requiredRoles={['customer']}>
+              <DesignStudioPage />
+            </ProtectedRoute>
+          } />
           <Route path="my-tenders" element={
             <ProtectedRoute requiredRoles={['customer']}>
               <MyTendersPage />
@@ -157,6 +170,16 @@ export function App() {
           } />
           <Route path="wishlist" element={<WishlistPage />} />
           <Route path="addresses" element={<AddressManagementPage />} />
+          <Route path="reviews" element={
+            <ProtectedRoute requiredRoles={['customer']}>
+              <MyReviewsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="messages" element={
+            <ProtectedRoute requiredRoles={['customer']}>
+              <CustomerMessagesPage />
+            </ProtectedRoute>
+          } />
         </Route>
 
         {/* Workshop routes — protected */}
@@ -171,12 +194,15 @@ export function App() {
           <Route path="dashboard" element={<WorkshopDashboardPage />} />
           <Route path="products" element={<WorkshopProductManagementPage />} />
           <Route path="production" element={<WorkshopOrderManagementPage />} />
-          <Route path="production-management" element={<ProductionManagementPage />} />
+          <Route path="production/:orderId" element={<WorkshopOrderDetailPage />} />
+          <Route path="production-management" element={<CustomOrderManagementPage />} />
+          <Route path="ready-made-orders" element={<ProductionManagementPage />} />
           <Route path="marketplace" element={<WorkshopTenderMarketplacePage />} />
           <Route path="marketplace/:postId" element={<WorkshopTenderDetailPage />} />
           <Route path="submit-quote" element={<QuoteManagementPage />} />
           <Route path="quotes" element={<QuoteManagementPage />} />
           <Route path="messages" element={<MessagesPage />} />
+          <Route path="reviews" element={<WorkshopReviewsPage />} />
           <Route path="finance" element={<WorkshopFinancialPage />} />
           <Route path="settings" element={<ProfileSetupPage />} />
           <Route path="settings-legacy" element={<WorkshopProfileSettingsPage />} />
@@ -197,9 +223,12 @@ export function App() {
           <Route path="products" element={<AdminProductAuditPage />} />
           <Route path="users" element={<AdminUserManagementPage />} />
           <Route path="withdrawals" element={<AdminWithdrawalManagementPage />} />
+          <Route path="complaints" element={<AdminComplaintManagementPage />} />
+          <Route path="disputes" element={<AdminDisputeManagementPage />} />
           <Route path="coupons" element={<AdminCouponManagementPage />} />
           <Route path="cms" element={<AdminCMSPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
+          <Route path="messages" element={<AdminMessagesPage />} />
         </Route>
 
         {/* Auth routes */}

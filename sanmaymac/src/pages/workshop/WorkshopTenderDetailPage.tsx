@@ -8,20 +8,7 @@ import {
   type WorkshopQuote,
 } from '../../services/endpoints/workshopService';
 import { formatWorkshopDate } from '../../utils/workshopUi';
-
-const POST_STATUS_LABELS: Record<string, string> = {
-  OPEN: 'Đang mở',
-  CLOSED: 'Đã đóng',
-  AWARDED: 'Đã chọn xưởng',
-  CANCELLED: 'Đã hủy',
-};
-
-const QUOTE_STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Chờ phản hồi',
-  ACCEPTED: 'Được chọn',
-  REJECTED: 'Không được chọn',
-  WITHDRAWN: 'Đã rút',
-};
+import { POST_STATUS_LABELS, QUOTE_STATUS_LABELS } from '../../utils/biddingUi';
 
 export const WorkshopTenderDetailPage = () => {
   const { postId } = useParams<{ postId: string }>();
@@ -47,9 +34,9 @@ export const WorkshopTenderDetailPage = () => {
       setError(null);
 
       try {
-        const [postRes, quotesRes] = await Promise.all([
+        const [postRes, quoteRes] = await Promise.all([
           workshopService.getBiddingPostById(id),
-          workshopService.getWorkshopQuotes({ page: 0, size: 100, sort: 'createdAt,desc' }),
+          workshopService.getMyQuoteOnPost(id),
         ]);
 
         if (!mounted) return;
@@ -57,8 +44,7 @@ export const WorkshopTenderDetailPage = () => {
         const detail = postRes.data.data ?? null;
         setPost(detail);
 
-        const quotes = quotesRes.data.data?.content ?? [];
-        const existing = quotes.find((q) => q.postId === id) ?? null;
+        const existing = quoteRes.data.data ?? null;
         setMyQuote(existing);
         if (existing) {
           setOfferedPrice(String(existing.offeredPrice ?? ''));
@@ -90,6 +76,7 @@ export const WorkshopTenderDetailPage = () => {
   }, [post]);
 
   const canSubmitQuote = post?.status === 'OPEN' && !myQuote;
+  const canEditQuote = myQuote?.status === 'PENDING';
 
   const handleSubmitQuote = async () => {
     if (!post || !offeredPrice || !estimateDays) return;
@@ -143,7 +130,8 @@ export const WorkshopTenderDetailPage = () => {
 
     try {
       await workshopService.withdrawWorkshopQuote(myQuote.id);
-      setMyQuote(null);
+      const quoteRes = await workshopService.getMyQuoteOnPost(id);
+      setMyQuote(quoteRes.data.data ?? null);
       setOfferedPrice('');
       setEstimateDays('7');
       setSuccessMessage('Đã rút báo giá.');
@@ -274,7 +262,7 @@ export const WorkshopTenderDetailPage = () => {
                           {QUOTE_STATUS_LABELS[myQuote.status ?? ''] ?? myQuote.status}
                         </span>
                       </p>
-                      {myQuote.status === 'PENDING' ? (
+                      {canEditQuote ? (
                         <>
                           <div className="space-y-1.5">
                             <label className="text-sm font-medium text-on-surface">Giá đề xuất (VND)</label>

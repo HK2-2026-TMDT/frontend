@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerLayout } from '../../layouts/CustomerLayout';
-import { catalogService, Product, Category } from '../../services/endpoints/catalogService';
+import { catalogService, Product, Category, getProductThumbnailUrl } from '../../services/endpoints/catalogService';
 import { workshopService, PublicWorkshop } from '../../services/endpoints/workshopService';
 import { cacheKeys, cacheService, cacheTtl } from '../../services/cache';
 
@@ -58,9 +58,7 @@ const HERO_IMAGES = {
 const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫';
 
 const getThumbnail = (product: Product) =>
-  product.images?.find((i) => i.isThumbnail)?.imageUrl ??
-  product.images?.[0]?.imageUrl ??
-  'https://placehold.co/400x300?text=No+Image';
+  getProductThumbnailUrl(product) || 'https://placehold.co/400x300?text=No+Image';
 
 // ── Skeleton loader ────────────────────────────────────────────────────────
 const ProductSkeleton = () => (

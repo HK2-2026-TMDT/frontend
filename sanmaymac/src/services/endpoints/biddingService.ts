@@ -93,6 +93,14 @@ const resolveDesignAssetUrl = (url: string) => {
   return `${backendOrigin}${normalizedPath}`;
 };
 
+export interface UpdateBiddingPostPayload {
+  title: string;
+  description: string;
+  aiImageUrl?: string;
+  frontDesignUrl?: string;
+  backDesignUrl?: string;
+}
+
 export const biddingService = {
   uploadDesigns: (frontDesign: File, backDesign: File) =>
     api.post<ApiResponse<UploadDesignResponse>>('/bidding/designs/upload', toFormData(frontDesign, backDesign), {
@@ -129,4 +137,10 @@ export const biddingService = {
     api.post<ApiResponse<AcceptQuoteResponse>>(`/bidding/posts/${postId}/quotes/${quoteId}/accept`, {
       addressId,
     }),
+
+  updatePost: (postId: number, payload: UpdateBiddingPostPayload) =>
+    api.put<ApiResponse<BiddingPostDetail>>(`/bidding/posts/${postId}`, payload),
+
+  deletePost: (postId: number) =>
+    api.delete<ApiResponse<null>>(`/bidding/posts/${postId}`),
 };

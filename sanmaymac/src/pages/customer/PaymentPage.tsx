@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CustomerLayout } from '../../layouts/CustomerLayout';
 import { orderService, type OrderDetail } from '../../services/endpoints/orderService';
 import { financeService } from '../../services/endpoints/financeService';
@@ -9,6 +9,8 @@ const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫';
 export const PaymentPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const standalone = searchParams.get('standalone') === '1';
   const orderId = Number(id);
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,7 @@ export const PaymentPage = () => {
       try {
         const res = await orderService.getMyOrderDetail(orderId);
         const detail = res.data.data;
-        if (detail?.checkoutBatchId) {
+        if (detail?.checkoutBatchId && !standalone) {
           navigate(`/payment/batch/${detail.checkoutBatchId}`, { replace: true });
           return;
         }
@@ -40,7 +42,7 @@ export const PaymentPage = () => {
     return () => {
       mounted = false;
     };
-  }, [orderId, navigate]);
+  }, [orderId, navigate, standalone]);
 
   const handleDeposit = async () => {
     setProcessing(true);
@@ -110,6 +112,11 @@ export const PaymentPage = () => {
             <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-6">
               <h1 className="text-2xl font-bold text-on-surface">Thanh toán đơn #DH-{order.id}</h1>
               <p className="text-sm text-on-surface-variant mt-1">Tổng thanh toán: <span className="font-semibold text-secondary">{fmt(order.totalAmount ?? 0)}</span></p>
+              {standalone && order.checkoutBatchId ? (
+                <p className="text-xs text-amber-700 mt-2">
+                  Thanh toán ví cho đơn lẻ (không qua thanh toán gộp MoMo).
+                </p>
+              ) : null}
             </section>
 
             <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-6 space-y-4">

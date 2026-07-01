@@ -7,6 +7,8 @@ import {
   type BiddingQuote,
 } from '../../services/endpoints/biddingService';
 import { addressService, type UserAddress } from '../../services/endpoints/addressService';
+import { EditTenderModal } from '../../components/customer/EditTenderModal';
+import { WorkshopRatingBadge } from '../../components/customer/WorkshopRatingBadge';
 
 const POST_STATUS: Record<string, string> = {
   OPEN: 'Đang nhận báo giá',
@@ -47,6 +49,8 @@ export const TenderQuotesPage = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [acceptQuoteId, setAcceptQuoteId] = useState<number | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const sortedQuotes = useMemo(
     () =>
@@ -126,6 +130,33 @@ export const TenderQuotesPage = () => {
     }
   };
 
+  const reloadPost = async () => {
+    const [postRes, quotesRes] = await Promise.all([
+      biddingService.getPostById(id),
+      biddingService.listPostQuotes(id, { page: 0, size: 100, sort: 'createdAt,desc' }),
+    ]);
+    setPost(postRes.data.data ?? null);
+    setQuotes(quotesRes.data.data?.content ?? []);
+  };
+
+  const handleDeletePost = async () => {
+    if (!post || post.status !== 'OPEN') return;
+    if (!window.confirm('Xóa yêu cầu báo giá này? Hành động không thể hoàn tác.')) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await biddingService.deletePost(post.id);
+      navigate('/my-tenders');
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Không thể xóa yêu cầu.';
+      setError(message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <CustomerLayout>
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-10 space-y-6">
@@ -158,6 +189,25 @@ export const TenderQuotesPage = () => {
               <p className="text-sm text-on-surface-variant">
                 {post.quoteCount ?? quotes.length} báo giá · Đăng {formatDate(post.createdAt)}
               </p>
+              {post.status === 'OPEN' ? (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditOpen(true)}
+                    className="btn-user-outline-sm"
+                  >
+                    Sửa yêu cầu
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={() => void handleDeletePost()}
+                    className="px-3 py-2 text-sm font-semibold text-error border border-error/30 rounded-xl disabled:opacity-50"
+                  >
+                    Xóa yêu cầu
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             {error ? (
@@ -191,13 +241,25 @@ export const TenderQuotesPage = () => {
                           </div>
                           <div className="min-w-0 space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="font-bold text-on-surface">
-                                {quote.workshopName ?? `Xưởng #${quote.workshopId}`}
-                              </h3>
+                              {quote.workshopId ? (
+                                <Link
+                                  to={`/workshop/${quote.workshopId}`}
+                                  className="font-bold text-on-surface hover:text-secondary"
+                                >
+                                  {quote.workshopName ?? `Xưởng #${quote.workshopId}`}
+                                </Link>
+                              ) : (
+                                <h3 className="font-bold text-on-surface">
+                                  {quote.workshopName ?? 'Xưởng'}
+                                </h3>
+                              )}
                               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.className}`}>
                                 {status.label}
                               </span>
                             </div>
+                            {quote.workshopId ? (
+                              <WorkshopRatingBadge workshopId={quote.workshopId} />
+                            ) : null}
                             <p className="text-2xl font-bold text-secondary">{fmt(quote.offeredPrice)}</p>
                             <p className="text-sm text-on-surface-variant">
                               Thời gian ước tính: {quote.estimateDays ?? '—'} ngày · Gửi lúc{' '}
@@ -310,6 +372,15 @@ export const TenderQuotesPage = () => {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {post && editOpen ? (
+        <EditTenderModal
+          post={post}
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          onSuccess={() => void reloadPost()}
+        />
       ) : null}
     </CustomerLayout>
   );

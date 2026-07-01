@@ -6,6 +6,7 @@ export interface PublicWorkshop {
   id: number;
   fullName: string;
   avatarUrl?: string;
+  logoUrl?: string;
   shopName: string;
   workshopAddress: string;
   productionCapacity: number;
@@ -34,6 +35,13 @@ export interface WorkshopOrderDetail extends WorkshopOrder {
   customerEmail?: string;
   workshopName?: string;
   workshopAddress?: string;
+  shippingFee?: number;
+  discountAmount?: number;
+  customerNote?: string;
+  receiverName?: string;
+  receiverPhone?: string;
+  shippingAddress?: string;
+  ghnOrderCode?: string;
   notes?: string;
   designUrl?: string;
   frontDesignUrl?: string;
@@ -41,18 +49,22 @@ export interface WorkshopOrderDetail extends WorkshopOrder {
   items?: Array<{ id?: number; productName?: string; quantity?: number; unitPrice?: number; totalPrice?: number }>;
 }
 
-export interface WorkshopOrderTimelineItem {
-  id?: number;
-  title: string;
-  description?: string;
-  status?: string;
-  completedAt?: string;
-  createdAt?: string;
+export interface WorkshopOrderTimeline {
+  orderId: number;
+  currentStatus?: string;
+  items: Array<{
+    code: string;
+    label: string;
+    completed: boolean;
+    updatedAt?: string;
+    note?: string;
+  }>;
 }
 
 export interface BiddingPostSummary {
   id: number;
   title: string;
+  description?: string;
   status?: string;
   quoteCount?: number;
   createdAt?: string;
@@ -227,6 +239,17 @@ const resolveAssetUrl = (url?: string) => {
 };
 const FINANCE_BASE = '/finance';
 
+type RawRevenueItem = { date?: string; period?: string; revenue?: number; totalRevenue?: number };
+
+const normalizeRevenueReport = (data?: WorkshopRevenueReport | null): WorkshopRevenueReport | null => {
+  if (!data) return null;
+  const items = (data.items ?? []).map((item: RawRevenueItem) => ({
+    date: item.date ?? item.period ?? '',
+    revenue: Number(item.revenue ?? item.totalRevenue ?? 0),
+  }));
+  return { groupBy: data.groupBy ?? 'month', items };
+};
+
 export const workshopService = {
   getPublicWorkshops: (params?: {
     keyword?: string;
@@ -240,6 +263,9 @@ export const workshopService = {
   getPublicWorkshopById: (workshopId: number) =>
     api.get<ApiResponse<PublicWorkshop>>(`/users/workshops/public/${workshopId}`),
 
+  getPublicWorkshopPortfolio: (workshopId: number) =>
+    api.get<ApiResponse<PortfolioItem[]>>(`/users/workshops/public/${workshopId}/portfolio`),
+
   getWorkshopOrders: (params?: { status?: string; orderType?: string; page?: number; size?: number; sort?: string }) =>
     api.get<ApiResponse<PageResponse<WorkshopOrder>>>(`${ORDER_BASE}/workshop`, { params }),
 
@@ -247,11 +273,14 @@ export const workshopService = {
     api.get<ApiResponse<WorkshopOrderDetail>>(`${ORDER_BASE}/workshop/${orderId}`),
 
   getWorkshopOrderTimeline: (orderId: number) =>
-    api.get<ApiResponse<WorkshopOrderTimelineItem[]>>(`${ORDER_BASE}/workshop/${orderId}/timeline`),
+    api.get<ApiResponse<WorkshopOrderTimeline>>(`${ORDER_BASE}/workshop/${orderId}/timeline`),
 
   acceptWorkshopOrder: (orderId: number) => api.post<ApiResponse<null>>(`${ORDER_BASE}/workshop/${orderId}/accept`),
 
   rejectWorkshopOrder: (orderId: number) => api.post<ApiResponse<null>>(`${ORDER_BASE}/workshop/${orderId}/reject`),
+
+  cancelWorkshopOrder: (orderId: number) =>
+    api.post<ApiResponse<WorkshopOrderDetail>>(`${ORDER_BASE}/workshop/${orderId}/cancel`),
 
   updateWorkshopOrderStatus: (orderId: number, status: 'DEPOSITED' | 'PRODUCING' | 'SHIPPED') =>
     api.post<ApiResponse<null>>(`${ORDER_BASE}/workshop/${orderId}/status`, { status }),
@@ -259,18 +288,27 @@ export const workshopService = {
   updateWorkshopTracking: (orderId: number, trackingCode: string) =>
     api.post<ApiResponse<null>>(`${ORDER_BASE}/workshop/${orderId}/tracking`, { trackingCode }),
 
-  getOpenBiddingPosts: (params?: { keyword?: string; sort?: string; page?: number; size?: number }) =>
+  getOpenBiddingPosts: (params?: {
+    keyword?: string;
+    sort?: string;
+    maxQuotes?: number;
+    page?: number;
+    size?: number;
+  }) =>
     api.get<ApiResponse<PageResponse<BiddingPostSummary>>>(`${BIDDING_BASE}/posts/open`, { params }),
 
   getBiddingPostById: (postId: number) =>
     api.get<ApiResponse<BiddingPostDetail>>(`${BIDDING_BASE}/posts/${postId}`),
+
+  getMyQuoteOnPost: (postId: number) =>
+    api.get<ApiResponse<WorkshopQuote | null>>(`${BIDDING_BASE}/posts/${postId}/quotes/me`),
 
   resolveAssetUrl,
 
   submitWorkshopQuote: (postId: number, payload: { offeredPrice: number; estimateDays: number }) =>
     api.post<ApiResponse<WorkshopQuote>>(`${BIDDING_BASE}/posts/${postId}/quotes`, payload),
 
-  getWorkshopQuotes: (params?: { page?: number; size?: number; sort?: string }) =>
+  getWorkshopQuotes: (params?: { status?: string; page?: number; size?: number; sort?: string }) =>
     api.get<ApiResponse<PageResponse<WorkshopQuote>>>(`${BIDDING_BASE}/quotes/me`, { params }),
 
   updateWorkshopQuote: (quoteId: number, payload: { offeredPrice: number; estimateDays: number }) =>
@@ -287,8 +325,19 @@ export const workshopService = {
 
   requestWorkshopPayout: (amount: number) => api.post<ApiResponse<WorkshopPayout>>(`${FINANCE_BASE}/payouts`, { amount }),
 
-  getWorkshopRevenue: (params?: { from?: string; to?: string; groupBy?: 'day' | 'month' }) =>
-    api.get<ApiResponse<WorkshopRevenueReport>>(`${FINANCE_BASE}/revenue`, { params }),
+  cancelWorkshopPayout: (payoutId: number) =>
+    api.post<ApiResponse<WorkshopPayout>>(`${FINANCE_BASE}/payouts/${payoutId}/cancel`),
+
+  getWorkshopRevenue: async (params?: { from?: string; to?: string; groupBy?: 'day' | 'month' }) => {
+    const response = await api.get<ApiResponse<WorkshopRevenueReport>>(`${FINANCE_BASE}/revenue`, { params });
+    return {
+      ...response,
+      data: {
+        ...response.data,
+        data: normalizeRevenueReport(response.data.data),
+      },
+    };
+  },
 
   getWorkshopBankAccount: () => api.get<ApiResponse<WorkshopBankAccount>>(`${FINANCE_BASE}/bank-account`),
 
@@ -392,6 +441,7 @@ export const enrichWorkshopOrders = async (orders: WorkshopOrder[]): Promise<Wor
           ? `${items[0]?.productName ?? 'Sản phẩm'} (+${items.length - 1})`
           : items[0]?.productName ?? (order.orderType === 'READY_MADE' ? 'Hàng có sẵn' : 'Đơn may đo'),
       quantity,
+      customerName: order.customerName ?? detail?.customerName,
       trackingCode: order.trackingCode ?? detail?.trackingCode,
       totalAmount: order.totalAmount ?? detail?.totalAmount,
     };

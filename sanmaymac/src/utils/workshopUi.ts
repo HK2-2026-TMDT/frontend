@@ -22,6 +22,17 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
 export const getOrderStatusLabel = (status?: string) =>
   (status && ORDER_STATUS_LABELS[status]) || status || 'Không rõ';
 
+export const getOrderTypeLabel = (orderType?: string) => {
+  switch (orderType) {
+    case 'READY_MADE':
+      return 'Hàng mẫu sẵn';
+    case 'CUSTOM':
+      return 'Đơn gia công';
+    default:
+      return orderType ?? '—';
+  }
+};
+
 export const getOrderStatusClass = (status?: string) => {
   switch (status) {
     case 'COMPLETED':
@@ -76,6 +87,14 @@ export const getTransactionTypeLabel = (type?: string) => {
   switch (type) {
     case 'ORDER_PAYMENT':
       return 'Thanh toán đơn hàng';
+    case 'ESCROW_HOLD':
+      return 'Giữ quỹ';
+    case 'ESCROW_RELEASE':
+      return 'Giải ngân';
+    case 'COMMISSION_FEE':
+      return 'Phí hoa hồng';
+    case 'REFUND':
+      return 'Hoàn tiền';
     case 'PAYOUT':
       return 'Rút tiền';
     case 'AI_TOKEN_PURCHASE':

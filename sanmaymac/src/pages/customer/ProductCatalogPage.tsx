@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CustomerLayout } from '../../layouts/CustomerLayout';
-import { catalogService, Product, Category } from '../../services/endpoints/catalogService';
+import { catalogService, Product, Category, getProductThumbnailUrl } from '../../services/endpoints/catalogService';
 import { cacheKeys, cacheService, cacheTtl } from '../../services/cache';
 
 const SORT_OPTIONS = [
@@ -13,9 +13,7 @@ const SORT_OPTIONS = [
 
 const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫';
 
-const getThumbnail = (product: Product) =>
-  product.images?.find((i) => i.isThumbnail)?.imageUrl ??
-  product.images?.[0]?.imageUrl ?? '';
+const getThumbnail = (product: Product) => getProductThumbnailUrl(product);
 
 const ProductSkeleton = () => (
   <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden animate-pulse">

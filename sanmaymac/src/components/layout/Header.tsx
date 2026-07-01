@@ -173,13 +173,29 @@ const Header = () => {
                       Quản lý địa chỉ
                     </Link>
                     {user.role === 'customer' && (
-                      <Link
-                        to="/my-tenders"
-                        className="flex items-center gap-3 px-3 py-2 text-sm text-on-surface hover:bg-surface-container rounded-xl transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">request_quote</span>
-                        Báo giá của tôi
-                      </Link>
+                      <>
+                        <Link
+                          to="/my-tenders"
+                          className="flex items-center gap-3 px-3 py-2 text-sm text-on-surface hover:bg-surface-container rounded-xl transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">request_quote</span>
+                          Báo giá của tôi
+                        </Link>
+                        <Link
+                          to="/reviews"
+                          className="flex items-center gap-3 px-3 py-2 text-sm text-on-surface hover:bg-surface-container rounded-xl transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">rate_review</span>
+                          Đánh giá của tôi
+                        </Link>
+                        <Link
+                          to="/messages"
+                          className="flex items-center gap-3 px-3 py-2 text-sm text-on-surface hover:bg-surface-container rounded-xl transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">chat</span>
+                          Tin nhắn
+                        </Link>
+                      </>
                     )}
 
                     {user.role === 'workshop' && (

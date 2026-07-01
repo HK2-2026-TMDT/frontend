@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerLayout } from '../../layouts/CustomerLayout';
-import { biddingService, type BiddingPostSummary } from '../../services/endpoints/biddingService';
+import { EditTenderModal } from '../../components/customer/EditTenderModal';
+import {
+  biddingService,
+  type BiddingPostDetail,
+  type BiddingPostSummary,
+} from '../../services/endpoints/biddingService';
 
 const POST_STATUS: Record<string, { label: string; className: string }> = {
   OPEN: { label: 'Đang nhận báo giá', className: 'bg-green-100 text-green-800' },
@@ -22,33 +27,51 @@ export const MyTendersPage = () => {
   const [posts, setPosts] = useState<BiddingPostSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editPost, setEditPost] = useState<BiddingPostDetail | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const loadPosts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await biddingService.listMyPosts({ page: 0, size: 50, sort: 'createdAt,desc' });
+      setPosts(res.data.data?.content ?? []);
+    } catch {
+      setError('Không thể tải danh sách yêu cầu của bạn.');
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await biddingService.listMyPosts({ page: 0, size: 50, sort: 'createdAt,desc' });
-        if (mounted) {
-          setPosts(res.data.data?.content ?? []);
-        }
-      } catch {
-        if (mounted) {
-          setError('Không thể tải danh sách yêu cầu của bạn.');
-          setPosts([]);
-        }
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    void load();
-    return () => {
-      mounted = false;
-    };
+    void loadPosts();
   }, []);
+
+  const handleEdit = async (postId: number) => {
+    try {
+      const res = await biddingService.getPostById(postId);
+      setEditPost(res.data.data ?? null);
+      setEditOpen(true);
+    } catch {
+      setError('Không thể tải chi tiết yêu cầu.');
+    }
+  };
+
+  const handleDelete = async (postId: number) => {
+    if (!window.confirm('Xóa yêu cầu báo giá này?')) return;
+    setDeletingId(postId);
+    setError(null);
+    try {
+      await biddingService.deletePost(postId);
+      await loadPosts();
+    } catch {
+      setError('Không thể xóa yêu cầu.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <CustomerLayout>
@@ -109,13 +132,34 @@ export const MyTendersPage = () => {
                         </span>
                       </div>
                     </div>
-                    <Link
-                      to={`/my-tenders/${post.id}`}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-secondary/30 bg-secondary/5 px-4 py-2.5 text-sm font-semibold text-secondary hover:bg-secondary/10 shrink-0"
-                    >
-                      Xem báo giá
-                      <span className="material-symbols-outlined text-base">arrow_forward</span>
-                    </Link>
+                    <div className="flex flex-wrap gap-2 shrink-0">
+                      <Link
+                        to={`/my-tenders/${post.id}`}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-secondary/30 bg-secondary/5 px-4 py-2.5 text-sm font-semibold text-secondary hover:bg-secondary/10"
+                      >
+                        Xem báo giá
+                        <span className="material-symbols-outlined text-base">arrow_forward</span>
+                      </Link>
+                      {post.status === 'OPEN' ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => void handleEdit(post.id)}
+                            className="btn-user-outline-sm"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            type="button"
+                            disabled={deletingId === post.id}
+                            onClick={() => void handleDelete(post.id)}
+                            className="px-3 py-2.5 text-sm font-semibold text-error border border-error/30 rounded-xl disabled:opacity-50"
+                          >
+                            Xóa
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
                   </div>
                 </article>
               );
@@ -138,6 +182,15 @@ export const MyTendersPage = () => {
           </div>
         )}
       </div>
+
+      {editPost && editOpen ? (
+        <EditTenderModal
+          post={editPost}
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          onSuccess={() => void loadPosts()}
+        />
+      ) : null}
     </CustomerLayout>
   );
 };
