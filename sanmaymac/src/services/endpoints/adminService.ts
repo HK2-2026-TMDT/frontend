@@ -49,6 +49,27 @@ export interface CashflowSummary {
   platformRevenue: number;
 }
 
+export interface DashboardTrendItem {
+  period: string;
+  totalOrders: number;
+  totalRevenue: number;
+}
+
+export interface WorkshopRevenueShare {
+  workshopId: number;
+  workshopName: string;
+  revenue: number;
+  orderCount: number;
+}
+
+export interface AdminDashboardStats {
+  trend: {
+    groupBy: string;
+    items: DashboardTrendItem[];
+  };
+  revenueByWorkshop: WorkshopRevenueShare[];
+}
+
 export const adminService = {
   searchUsers: (params?: {
     keyword?: string;
@@ -85,4 +106,7 @@ export const adminService = {
 
   getCashflow: (params?: { from?: string; to?: string }) =>
     api.get<ApiResponse<CashflowSummary>>('/finance/admin/cashflow', { params }),
+
+  getDashboardStats: (params?: { from?: string; to?: string; groupBy?: 'day' | 'month' }) =>
+    api.get<ApiResponse<AdminDashboardStats>>('/finance/admin/dashboard-stats', { params }),
 };
